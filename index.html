@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>煮蛋計時器</title>
+<meta name="description" content="選熟度、倒數、中途提醒、時間到出聲講話的煮蛋計時器。資料只存在這台裝置。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f1f3f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10181a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="煮蛋">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+/* Layout: phone-first single column (header → method tabs → egg cards → settings → timer); from 900px two columns, timer sticky on the right. Colors come from the egg itself: eggshell neutrals, yolk accent. */
+:root{
+  --bg:#f1f3f0; --fg:#1c2625; --muted:#5e6c6a; --card:#ffffff; --line:#d3dad7; --line-strong:#aeb9b5;
+  --accent:#e2900c; --accent-ink:#ffffff; --tint:#fcefd8; --ok:#2f8a5b; --focus:#1f6feb;
+  --egg-white:#fffdf6; --egg-stroke:#cdbfa6; --ring-track:#e3e8e5;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --font-num:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10181a; --fg:#edf1ef; --muted:#9aa9a6; --card:#1a2426; --line:#2c393b; --line-strong:#465557;
+    --accent:#f3a62b; --accent-ink:#1a1204; --tint:#3a2a0f; --ok:#5fc48c; --focus:#6ea8ff;
+    --egg-white:#f4efe2; --egg-stroke:#9b8a6b; --ring-track:#243031; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10181a; --fg:#edf1ef; --muted:#9aa9a6; --card:#1a2426; --line:#2c393b; --line-strong:#465557;
+  --accent:#f3a62b; --accent-ink:#1a1204; --tint:#3a2a0f; --ok:#5fc48c; --focus:#6ea8ff;
+  --egg-white:#f4efe2; --egg-stroke:#9b8a6b; --ring-track:#243031; color-scheme:dark;
+}
+html{height:100%;-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);line-height:1.55;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+h1,h2,h3{margin:0;text-wrap:balance;font-weight:700}
+button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--line-strong);background:var(--card);border-radius:10px;padding:8px 14px}
+button:focus-visible,input:focus-visible,[role=tab]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+.num{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;max-width:1080px;margin:0 auto 14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{width:30px;height:36px;flex:none}
+.brand h1{font-size:1.25rem;letter-spacing:.02em}
+.brand small{display:block;color:var(--muted);font-size:.78rem;font-weight:400}
+.switches{display:flex;gap:8px}
+.sw{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;font-size:.85rem;border-radius:999px}
+.sw[aria-pressed="true"]{background:var(--tint);border-color:var(--accent)}
+.sw .dot{width:8px;height:8px;border-radius:50%;background:var(--line-strong)}
+.sw[aria-pressed="true"] .dot{background:var(--accent)}
+
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px;grid-template-columns:1fr}
+@media (min-width:900px){.wrap{grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr);align-items:start}.timer{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}}
+.picker,.timer{min-width:0}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{border-radius:999px;padding:7px 14px;font-size:.92rem;background:transparent;border-color:var(--line)}
+.tabs button[aria-selected="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.prep{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px}
+.prep h2{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.prep ul{margin:0;padding-left:1.2em;font-size:.9rem;color:var(--fg)}
+.prep li{margin:3px 0}
+
+.cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:14px}
+.card{text-align:left;display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:var(--card);min-width:0}
+.card[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;background:var(--tint)}
+.card .egg{width:44px;height:54px}
+.card .n{font-weight:700;font-size:1rem;line-height:1.3}
+.card .t{color:var(--muted);font-size:.85rem}
+.card .d{font-size:.8rem;color:var(--muted);line-height:1.4;margin-top:2px}
+.card.plus{grid-template-columns:1fr;text-align:center;color:var(--muted);border-style:dashed;min-height:76px;align-content:center}
+
+.detail{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.detail h2{font-size:1.1rem;margin-bottom:4px}
+.detail .use{color:var(--muted);font-size:.9rem;margin:0 0 10px}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.steps li{display:grid;grid-template-columns:58px 1fr;gap:10px;font-size:.9rem;align-items:baseline}
+.steps .at{color:var(--accent);font-weight:700}
+.steps .at.end{color:var(--ok)}
+.steps .what{min-width:0}
+.steps .what small{display:block;color:var(--muted)}
+
+.adjust{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:grid;gap:10px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row .lab{font-size:.85rem;color:var(--muted);min-width:5.5em}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 12px;font-size:.88rem;background:transparent}
+.seg button+button{border-left:1px solid var(--line-strong)}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.chk{display:flex;align-items:center;gap:8px;font-size:.9rem;cursor:pointer}
+.chk input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.tune{display:inline-flex;align-items:center;gap:8px}
+.tune .v{min-width:4.5em;text-align:center;font-weight:700}
+.hint{font-size:.8rem;color:var(--muted);margin:0}
+
+.timer{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 16px;display:grid;gap:12px;position:relative;overflow:hidden}
+.timer.done{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent) inset}
+.timer .head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.timer .head h2{font-size:1.15rem}
+.timer .state{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dial{position:relative;width:min(260px,72vw);margin:0 auto;aspect-ratio:1;max-width:100%}
+.dial svg{width:100%;height:100%;transform:rotate(-90deg)}
+.dial .track{fill:none;stroke:var(--ring-track);stroke-width:10}
+.dial .bar{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset .25s linear}
+.dial .total{fill:none;stroke:var(--line-strong);stroke-width:3;opacity:.6}
+.dial .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:2px}
+.dial .big{font-size:clamp(2.6rem,12vw,3.6rem);font-weight:700;line-height:1;letter-spacing:-.02em}
+.dial .sub{font-size:.8rem;color:var(--muted)}
+.now{text-align:center;display:grid;gap:4px}
+.now .ph{font-weight:700;font-size:1.1rem}
+.now .note{color:var(--muted);font-size:.9rem;max-width:34em;margin:0 auto}
+.next{font-size:.85rem;color:var(--muted);text-align:center;border-top:1px dashed var(--line);padding-top:10px}
+.next b{color:var(--fg)}
+.ctl{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{padding:12px 20px;font-size:1rem;font-weight:700;border-radius:12px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.big{width:100%;font-size:1.15rem;padding:16px}
+.btn.quiet{background:transparent}
+.toast{position:absolute;left:12px;right:12px;top:10px;background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:12px;font-size:.95rem;font-weight:500;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:2}
+.timer.done .dial .bar{stroke:var(--ok)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.timer.done .big{animation:pulse 1.2s ease-in-out infinite;color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.timer.done .big{animation:none}.dial .bar{transition:none}}
+.foot{font-size:.78rem;color:var(--muted);text-align:center}
+
+.form{display:grid;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.form h2{font-size:1rem}
+.form label{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+.form input[type=text],.form input[type=number]{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .inline{display:flex;gap:8px;align-items:end}
+.form .inline label{flex:1}
+.form .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.del{font-size:.8rem;color:var(--muted);background:transparent;border:0;padding:4px 6px;text-decoration:underline}
+.site{max-width:1080px;margin:28px auto 0;border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px;font-size:.85rem;color:var(--muted)}
+.site h2{font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.site p{margin:0}
+.site .link{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.site code{font-family:var(--font-num);font-size:.8rem;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:3px 6px;word-break:break-all}
+.site button{font-size:.85rem;padding:6px 10px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 48 60" aria-hidden="true"><ellipse cx="24" cy="32" rx="19" ry="25" fill="var(--egg-white)" stroke="var(--egg-stroke)" stroke-width="2"/><circle cx="24" cy="34" r="11" fill="var(--accent)"/></svg>
+    <div><h1>煮蛋計時器</h1><small>選一種蛋，按開始，時間到會出聲、會講話</small></div>
+  </div>
+  <div class="switches">
+    <button class="sw" id="swSound" aria-pressed="true" type="button"><span class="dot"></span>提示音</button>
+    <button class="sw" id="swVoice" aria-pressed="true" type="button"><span class="dot"></span>語音</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="picker" aria-label="選擇做法">
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+    <div class="prep" id="prep" hidden></div>
+    <div class="cards" id="cards"></div>
+    <div class="form" id="form" hidden>
+      <h2 id="formTitle">新增自訂倒數</h2>
+      <label>名稱<input type="text" id="fName" maxlength="20" placeholder="例如：鵪鶉蛋、玉米、水餃"></label>
+      <div class="two">
+        <label>分<input type="number" id="fMin" min="0" max="180" value="5" inputmode="numeric"></label>
+        <label>秒<input type="number" id="fSec" min="0" max="59" value="0" inputmode="numeric"></label>
+      </div>
+      <div class="inline">
+        <label>中途提醒（第幾分鐘，留空就不提醒）<input type="number" id="fMidAt" min="1" max="180" inputmode="numeric" placeholder="例如 2"></label>
+        <label>提醒內容<input type="text" id="fMidText" maxlength="30" placeholder="例如：翻面、攪拌一下"></label>
+      </div>
+      <label>時間到要做什麼<input type="text" id="fEnd" maxlength="40" placeholder="例如：撈起來泡冰水"></label>
+      <div class="acts"><button type="button" id="fCancel">取消</button><button type="button" class="primary btn" id="fSave" style="padding:8px 16px;font-size:.95rem">儲存並選用</button></div>
+    </div>
+    <div class="detail" id="detail" hidden></div>
+    <div class="adjust" id="adjust">
+      <div class="row" id="rowTemp"><span class="lab">蛋的溫度</span>
+        <div class="seg" role="group" aria-label="蛋的溫度"><button type="button" data-temp="fridge">冰箱直接拿</button><button type="button" data-temp="room">已放到室溫 −45 秒</button></div></div>
+      <div class="row" id="rowSize"><span class="lab">蛋的大小</span>
+        <div class="seg" role="group" aria-label="蛋的大小"><button type="button" data-size="s">小 −30 秒</button><button type="button" data-size="m">中（約 60 g）</button><button type="button" data-size="l">大 +30 秒</button></div></div>
+      <label class="chk" id="rowStir"><input type="checkbox" id="chkStir"> 頭 2 分鐘輕輕攪動，讓蛋黃置中（對切擺盤用）</label>
+      <div class="row"><span class="lab">微調</span>
+        <div class="tune"><button type="button" id="tuneDown" aria-label="減 15 秒">−15 秒</button><span class="v num" id="tuneVal">0 秒</span><button type="button" id="tuneUp" aria-label="加 15 秒">+15 秒</button></div></div>
+      <p class="hint" id="adjHint">調整會加在最後一段煮的時間上。上面的秒數是常見建議，依自家爐火和鍋子試過一次再定。</p>
+    </div>
+  </section>
+
+  <section class="timer" id="timer" aria-live="polite">
+    <div class="toast" id="toast" hidden></div>
+    <div class="head"><h2 id="tName">—</h2><span class="state" id="tState">準備</span></div>
+    <div class="dial">
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle class="track" cx="110" cy="110" r="92"/>
+        <circle class="total" cx="110" cy="110" r="104" id="ringTotal"/>
+        <circle class="bar" cx="110" cy="110" r="92" id="ringBar"/>
+      </svg>
+      <div class="mid"><div class="big num" id="tBig">0:00</div><div class="sub" id="tSub"></div></div>
+    </div>
+    <div class="now"><div class="ph" id="tPhase"></div><div class="note" id="tNote"></div></div>
+    <div class="next" id="tNext" hidden></div>
+    <div class="ctl" id="tCtl"></div>
+    <div class="foot" id="tFoot">煮的時候請讓這個畫面開著，手機會自動保持亮著；切到別的 App 時提醒可能會延後。</div>
+  </section>
+</main>
+
+<script>
+(function(){
+'use strict';
+/* ---------- 資料：之後要加別的食物，照這個格式新增一個 group 即可 ---------- */
+const ICE_NOTE = '馬上撈起來放進冰塊水，停止餘溫繼續加熱，殼也比較好剝';
+const STIR_PHASE = {dur:120, title:'輕輕攪動', note:'用筷子或湯匙同一方向輕輕攪動，讓蛋黃留在正中間。不要蓋蓋子', say:'開始。頭兩分鐘輕輕攪動，讓蛋黃置中'};
+const WAIT_BOIL = {wait:true, title:'等水大滾', note:'中大火加熱，不蓋蓋子。看到整鍋大滾就按下面的「水滾了」', say:'開始加熱，水大滾的時候按水滾了'};
+
+function boilItem(id,name,sec,yolk,desc,use,ice){
+  return {id,name,total:sec,yolk,desc,use,adjustable:true,stirrable:true,ice,
+    phases:[{dur:sec,title:'中小火微滾',note:'放蛋後轉中小火，水面輕輕冒泡就好，不蓋蓋子',say:'已放蛋，轉中小火保持微滾，不要蓋蓋子'}],
+    finish:{title:'撈起來泡冰水',note:ICE_NOTE,say:'時間到，'+name+'好了，馬上撈起來泡冰水'}};
+}
+function coldItem(id,name,sec,yolk,desc,use,ice){
+  return {id,name,total:sec,yolk,desc,use,adjustable:true,stirrable:false,ice,
+    phases:[WAIT_BOIL,{dur:sec,title:'關火、加蓋燜',note:'關火（電爐要整鍋移開爐口），蓋上蓋子，用餘溫燜，中途不要開蓋',say:'關火，蓋上蓋子，燜'+zhMin(sec)}],
+    finish:{title:'撈起來泡冰水',note:ICE_NOTE,say:'時間到，'+name+'好了，撈起來泡冰水'}};
+}
+function zhMin(sec){const m=Math.round(sec/60);const d=['零','一','兩','三','四','五','六','七','八','九','十','十一','十二','十三','十四','十五'];return (d[m]||m)+'分鐘';}
+
+const GROUPS = {
+  boil:{label:'沸水下蛋',
+    prep:['水量要蓋過蛋 3 公分以上，鍋子選大一點，蛋不要擠在一起；水多，放蛋時溫度才不會掉太多。','先大火把水燒到大滾，蛋從冰箱直接拿出來，用湯匙輕輕放進去（這裡的時間都是以冰箱蛋為準）。','放蛋後轉中小火，保持微滾，不蓋蓋子；大滾會讓蛋互撞破殼。','先準備一碗冰塊水。時間一到就撈起來泡，不然餘溫會把蛋黃繼續煮老。'],
+    items:[
+      boilItem('b5','流心蛋',300,1,'蛋白剛好凝固，蛋黃整個是流動的','沾吐司條、拌熱飯',300),
+      boilItem('b630','溏心蛋',390,2,'蛋白全熟，蛋黃濃稠會流；拉麵蛋就是這一種','拉麵蛋、醬漬蛋、對切擺盤',300),
+      boilItem('b8','半熟蛋',480,3,'蛋黃呈膏狀，中心微軟，不會流出來','早餐、沙拉、三明治',300),
+      boilItem('b10','嫩全熟',600,4,'蛋黃剛凝固、還濕潤，不會出現灰綠圈','切片、便當、蛋沙拉',600),
+      boilItem('b12','全熟蛋',720,5,'蛋黃完全凝固，質地結實','魔鬼蛋、帶出門、要放幾天的',600)
+    ]},
+  cold:{label:'冷水起煮',
+    prep:['蛋單層放進鍋裡，加冷水蓋過蛋 2～3 公分，不蓋蓋子。','中大火加熱，看到整鍋大滾就按「水滾了」，然後關火、蓋上蓋子，用餘溫燜。','蛋跟水一起加熱，蛋殼比較不容易破；但蛋黃不一定在正中間。','燜的時間到就撈起泡冰水。'],
+    items:[
+      coldItem('c5','燜溏心',300,2,'關火燜 5 分鐘：蛋白凝固，蛋黃接近流心','拉麵蛋、沙拉',300),
+      coldItem('c8','燜半熟',480,3,'關火燜 8 分鐘：蛋黃膏狀、滑嫩','早餐、三明治',300),
+      coldItem('c12','燜全熟',720,5,'關火燜 12 分鐘：蛋黃完全凝固，最不容易破殼的做法','蛋沙拉、便當',600),
+      {id:'m3',name:'少水・溏心',total:420,yolk:2,desc:'日本農林水產省的省水煮法：冷水只加 1 公分高，加蓋煮 4 分鐘後關火燜 3 分鐘',use:'一次煮很多顆、省水省瓦斯',adjustable:false,stirrable:false,ice:300,
+        phases:[{wait:true,title:'等水滾',note:'鍋裡放蛋，加 1 公分高的冷水，中火加熱，不蓋蓋子。水滾就按「水滾了」',say:'開始加熱，水滾的時候按水滾了'},
+                {dur:240,title:'蓋上蓋子，中火煮',note:'立刻蓋上蓋子，維持中火 4 分鐘',say:'蓋上蓋子，中火煮四分鐘'},
+                {dur:180,title:'關火，繼續燜',note:'關火，蓋子不要開，燜 3 分鐘',say:'關火，蓋子不要開，燜三分鐘'}],
+        finish:{title:'撈起來泡冰水',note:ICE_NOTE,say:'時間到，溏心蛋好了，撈起來泡冰水'}},
+      {id:'m5',name:'少水・全熟',total:540,yolk:5,desc:'同上做法，關火後燜 5 分鐘就是全熟',use:'一次煮很多顆、省水省瓦斯',adjustable:false,stirrable:false,ice:600,
+        phases:[{wait:true,title:'等水滾',note:'鍋裡放蛋，加 1 公分高的冷水，中火加熱，不蓋蓋子。水滾就按「水滾了」',say:'開始加熱，水滾的時候按水滾了'},
+                {dur:240,title:'蓋上蓋子，中火煮',note:'立刻蓋上蓋子，維持中火 4 分鐘',say:'蓋上蓋子，中火煮四分鐘'},
+                {dur:300,title:'關火，繼續燜',note:'關火，蓋子不要開，燜 5 分鐘',say:'關火，蓋子不要開，燜五分鐘'}],
+        finish:{title:'撈起來泡冰水',note:ICE_NOTE,say:'時間到，全熟蛋好了，撈起來泡冰水'}}
+    ]},
+  onsen:{label:'溫泉蛋',
+    prep:['溫泉蛋靠的是水溫，不是滾水：蛋黃大約 65～70°C 就開始變稠，蛋白要更高溫才會定型，所以做出來是「黃稠、白嫩」。','控溫法要有溫度計。免溫度計的燜法受鍋子保溫程度影響很大，第一次先試一顆，太生就下次多燜 1～2 分鐘。','半熟蛋請用新鮮、冷藏保存的蛋，做好馬上吃；孕婦、幼兒、長者與免疫力低的人避免。'],
+    items:[
+      {id:'o20',name:'控溫 20 分',total:1200,yolk:0,desc:'水溫維持 68～72°C 煮 20 分鐘，中途翻一次面',use:'拌飯、淋醬油味醂、沙拉',adjustable:false,stirrable:false,ice:180,need:'要溫度計',
+        phases:[{dur:600,title:'控溫 68～72°C',note:'水到 68°C 就放蛋。溫度太高就關火降溫，太低就開小火',say:'放蛋，水溫維持六十八到七十二度'},
+                {dur:600,title:'翻個面，繼續控溫',note:'用湯匙把蛋翻個面，蛋黃才不會固定在一邊。繼續維持 68～72°C',say:'十分鐘了，把蛋翻個面，繼續控溫'}],
+        finish:{title:'撈起沖冷水 3 分鐘',note:'沖冷水或泡冷水 3 分鐘，停止餘溫加熱。打進碗裡淋醬油味醂、撒蔥花',say:'時間到，溫泉蛋好了，撈起來沖冷水三分鐘'}},
+      {id:'o12',name:'關火燜 12 分',total:720,yolk:0,desc:'免溫度計：1 公升水大滾後關火，加 200 ml 冷水，放蛋加蓋燜 12 分鐘',use:'家裡沒有溫度計時',adjustable:true,stirrable:false,ice:180,
+        phases:[{wait:true,title:'等 1 公升水大滾',note:'小鍋裝 1 公升水，大火燒到大滾就按「水滾了」',say:'開始加熱，水大滾的時候按水滾了'},
+                {dur:720,title:'關火、加冷水、放蛋、加蓋燜',note:'關火，倒入 200 ml 冷水，放進 1～2 顆冰箱蛋，蓋上蓋子。蛋多就下次多燜 1～2 分鐘',say:'關火，加兩百毫升冷水，放蛋，蓋上蓋子，燜十二分鐘'}],
+        finish:{title:'撈起沖冷水 3 分鐘',note:'沖冷水或泡冷水 3 分鐘，停止餘溫加熱',say:'時間到，溫泉蛋好了，撈起來沖冷水三分鐘'}},
+      {id:'o15',name:'電子鍋保溫 15 分',total:900,yolk:0,desc:'70°C 的水蓋過蛋，用電子鍋的保溫模式泡 15 分鐘',use:'不想顧爐火',adjustable:false,stirrable:false,ice:180,
+        phases:[{dur:900,title:'保溫模式',note:'內鍋放蛋，倒入 70°C 熱水蓋過蛋，蓋上鍋蓋按「保溫」（不是煮飯）',say:'保溫模式，十五分鐘'}],
+        finish:{title:'撈起沖冷水 3 分鐘',note:'沖冷水或泡冷水 3 分鐘，停止餘溫加熱',say:'時間到，溫泉蛋好了，撈起來沖冷水三分鐘'}}
+    ]},
+  mine:{label:'我的',prep:[],items:[]}
+};
+const YOLK = {0:{fill:'#f4a21a',r:12,gloss:1,whiteOp:.55},1:{fill:'#ef9318',r:12,gloss:1,whiteOp:1},2:{fill:'#f0a21e',r:12,gloss:.7,whiteOp:1},3:{fill:'#f2b63a',r:12,gloss:.4,whiteOp:1},4:{fill:'#f1c85e',r:11,gloss:0,whiteOp:1},5:{fill:'#efd47a',r:11,gloss:0,whiteOp:1}};
+const TEMP_ADJ = {fridge:0,room:-45};
+const SIZE_ADJ = {s:-30,m:0,l:30};
+
+/* ---------- 狀態與儲存 ---------- */
+const KEY='eggtimer:v1';
+let S = {tab:'boil',sel:'b630',temp:'fridge',size:'m',stir:true,tune:0,sound:true,voice:true,custom:[]};
+try{ const saved=JSON.parse(localStorage.getItem(KEY)||'null'); if(saved&&typeof saved==='object') S=Object.assign(S,saved); }catch(e){}
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+GROUPS.mine.items = (S.custom||[]).map(customToItem);
+
+function customToItem(c){
+  const total=Math.max(15,c.total|0);
+  const phases=[];
+  if(c.midAt&&c.midAt<total){
+    phases.push({dur:c.midAt,title:'第一段',note:'到第 '+Math.round(c.midAt/60)+' 分鐘會提醒：'+c.midText,say:'開始倒數'});
+    phases.push({dur:total-c.midAt,title:c.midText||'中途提醒',note:c.midText||'',say:c.midText||'中途提醒'});
+  } else phases.push({dur:total,title:'倒數中',note:'',say:'開始倒數'});
+  return {id:c.id,name:c.name,total,yolk:-1,desc:fmt(total)+(c.midAt?'，第 '+Math.round(c.midAt/60)+' 分鐘提醒「'+c.midText+'」':''),use:c.endText||'',adjustable:false,stirrable:false,ice:0,custom:true,
+    phases,finish:{title:'時間到',note:c.endText||'',say:'時間到。'+(c.endText||'')}};
+}
+
+/* ---------- 工具 ---------- */
+const $=id=>document.getElementById(id);
+function fmt(sec){ sec=Math.max(0,Math.round(sec)); const m=Math.floor(sec/60), s=sec%60; return m+':'+String(s).padStart(2,'0'); }
+function findItem(id){ for(const g of Object.values(GROUPS)){ const it=g.items.find(i=>i.id===id); if(it) return it; } return null; }
+function currentItem(){ return findItem(S.sel) || GROUPS[S.tab].items[0] || null; }
+function adjustSeconds(it){ if(!it||!it.adjustable) return 0; return TEMP_ADJ[S.temp]+SIZE_ADJ[S.size]+(S.tune||0); }
+/* 把預設做法展開成實際要跑的階段（含攪動、調整） */
+function buildPhases(it){
+  let ph=it.phases.map(p=>Object.assign({},p));
+  if(it.stirrable&&S.stir){ const first=ph[0]; if(!first.wait&&first.dur>STIR_PHASE.dur+30){ first.dur-=STIR_PHASE.dur; first.say='兩分鐘到，停止攪動。保持微滾，不要蓋蓋子'; first.note='不要再動它。中小火保持微滾，不蓋蓋子'; ph.unshift(Object.assign({},STIR_PHASE)); } }
+  const adj=adjustSeconds(it);
+  if(adj){ for(let i=ph.length-1;i>=0;i--){ if(!ph[i].wait){ ph[i].dur=Math.max(30,ph[i].dur+adj); break; } } }
+  return ph;
+}
+function totalOf(ph){ return ph.reduce((a,p)=>a+(p.wait?0:p.dur),0); }
+function eggSvg(y){
+  if(y===-1) return '<svg class="egg" viewBox="0 0 48 60" aria-hidden="true"><circle cx="24" cy="30" r="20" fill="var(--egg-white)" stroke="var(--egg-stroke)" stroke-width="2"/><path d="M24 17v13l9 6" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>';
+  const k=YOLK[y]||YOLK[3];
+  return '<svg class="egg" viewBox="0 0 48 60" aria-hidden="true"><ellipse cx="24" cy="32" rx="19" ry="25" fill="var(--egg-white)" fill-opacity="'+k.whiteOp+'" stroke="var(--egg-stroke)" stroke-width="2"/><circle cx="24" cy="34" r="'+k.r+'" fill="'+k.fill+'"/>'+(k.gloss?'<ellipse cx="20" cy="29" rx="4" ry="2.5" fill="#fff" fill-opacity="'+(0.55*k.gloss)+'"/>':'')+'</svg>';
+}
+
+/* ---------- 畫面：左側選單 ---------- */
+function renderTabs(){
+  $('tabs').innerHTML = Object.entries(GROUPS).map(([k,g])=>'<button type="button" role="tab" data-tab="'+k+'" aria-selected="'+(S.tab===k)+'">'+g.label+'</button>').join('');
+}
+function renderPrep(){
+  const g=GROUPS[S.tab]; const el=$('prep');
+  if(!g.prep.length){ el.hidden=true; return; }
+  el.hidden=false; el.innerHTML='<h2>'+g.label+'・準備</h2><ul>'+g.prep.map(p=>'<li>'+p+'</li>').join('')+'</ul>';
+}
+function renderCards(){
+  const g=GROUPS[S.tab];
+  let html=g.items.map(it=>'<button type="button" class="card" data-id="'+it.id+'" aria-pressed="'+(S.sel===it.id)+'">'+eggSvg(it.yolk)+'<span><span class="n">'+it.name+'</span><span class="t num">'+fmt(totalOf(buildPhases(it)))+(it.need?'・'+it.need:'')+'</span><span class="d">'+it.desc+'</span></span></button>').join('');
+  if(S.tab==='mine') html+='<button type="button" class="card plus" id="addCustom">＋ 新增一個倒數</button>';
+  $('cards').innerHTML=html;
+}
+function renderDetail(){
+  const it=currentItem(); const el=$('detail');
+  if(!it){ el.hidden=true; return; }
+  el.hidden=false;
+  const ph=buildPhases(it); let t=0; const rows=[];
+  ph.forEach(p=>{ rows.push('<li><span class="at num">'+(p.wait?'—':fmt(t))+'</span><span class="what">'+p.title+'<small>'+p.note+'</small></span></li>'); if(!p.wait) t+=p.dur; });
+  rows.push('<li><span class="at end num">'+fmt(t)+'</span><span class="what">'+it.finish.title+'<small>'+it.finish.note+'</small></span></li>');
+  if(it.ice) rows.push('<li><span class="at num">之後</span><span class="what">泡冰水 '+fmt(it.ice)+'<small>時間到會再問你要不要倒數冰水</small></span></li>');
+  el.innerHTML='<h2>'+it.name+'</h2><p class="use">'+(it.custom?'':'適合：')+it.use+'</p><ol class="steps">'+rows.join('')+'</ol>'+(it.custom?'<div style="margin-top:8px"><button type="button" class="del" data-del="'+it.id+'">刪除這個自訂倒數</button></div>':'');
+}
+function renderAdjust(){
+  const it=currentItem();
+  const show=!!(it&&it.adjustable);
+  $('rowTemp').hidden=!show; $('rowSize').hidden=!show; $('adjHint').hidden=!show;
+  $('rowStir').hidden=!(it&&it.stirrable);
+  $('adjust').hidden=!it||(!it.adjustable&&!it.stirrable);
+  document.querySelectorAll('[data-temp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.temp===S.temp)));
+  document.querySelectorAll('[data-size]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.size===S.size)));
+  $('chkStir').checked=!!S.stir;
+  $('tuneVal').textContent=(S.tune>0?'+':'')+S.tune+' 秒';
+}
+function renderPicker(){ renderTabs(); renderPrep(); renderCards(); renderDetail(); renderAdjust(); }
+
+/* ---------- 計時引擎 ---------- */
+const CIRC=2*Math.PI*92;
+let run=null, tickId=null, alarmId=null;
+function setRing(frac){ $('ringBar').style.strokeDasharray=CIRC; $('ringBar').style.strokeDashoffset=CIRC*(1-Math.max(0,Math.min(1,frac))); }
+function renderIdle(){
+  const it=currentItem(); const t=$('timer'); t.classList.remove('done');
+  $('toast').hidden=true;
+  if(!it){ $('tName').textContent='—'; $('tBig').textContent='0:00'; $('tCtl').innerHTML=''; return; }
+  const ph=buildPhases(it); const total=totalOf(ph);
+  $('tName').textContent=it.name; $('tState').textContent='準備';
+  $('tBig').textContent=fmt(total); $('tSub').textContent=ph[0].wait?'水滾後開始計時':'全程';
+  setRing(0);
+  $('tPhase').textContent=ph[0].title; $('tNote').textContent=ph[0].wait?ph[0].note:'按開始的同時把蛋放進鍋裡';
+  $('tNext').hidden=true;
+  $('tCtl').innerHTML='<button type="button" class="btn primary big" id="btnStart">開始煮　'+fmt(total)+'</button>';
+  $('tFoot').hidden=false;
+}
+function start(simpleRun){
+  unlockAudio(); keepAwake();
+  const it=currentItem(); if(!it) return;
+  const phases = simpleRun ? simpleRun.phases : buildPhases(it);
+  run={item:it,phases,idx:-1,endAt:null,phaseStart:0,paused:false,pausedAt:0,pre:false,done:false,simple:!!simpleRun,finish:simpleRun?simpleRun.finish:it.finish};
+  beginPhase(0,true);
+  if(tickId) clearInterval(tickId); tickId=setInterval(tick,250);
+  $('timer').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function beginPhase(i,first){
+  run.idx=i; const p=run.phases[i]; run.phaseStart=Date.now(); run.pre=false;
+  run.endAt = p.wait ? null : run.phaseStart+p.dur*1000;
+  if(first){ chime(); } else { chime(); vib([200,100,200]); }
+  speak(p.say); toast(p.title+(p.note?'：'+p.note:''));
+  renderRun();
+}
+function tick(){
+  if(!run||run.paused||run.done) return;
+  const p=run.phases[run.idx]; const now=Date.now();
+  if(p.wait){ renderRun(); return; }
+  const rem=run.endAt-now;
+  if(rem<=0){ if(run.idx<run.phases.length-1) beginPhase(run.idx+1); else finish(); return; }
+  if(!run.pre && run.idx===run.phases.length-1 && p.dur>=90 && rem<=30000){ run.pre=true; beep(660,.18,0,.2); speak('還有三十秒，準備好'+(run.simple?'':'冰水')); }
+  renderRun();
+}
+function futureSeconds(){ let s=0; for(let i=run.idx+1;i<run.phases.length;i++){ if(!run.phases[i].wait) s+=run.phases[i].dur; } return s; }
+function renderRun(){
+  const p=run.phases[run.idx]; const now=Date.now(); const t=$('timer'); t.classList.remove('done');
+  $('tName').textContent=run.item.name+(run.simple?'・冰水':'');
+  if(p.wait){
+    const el=Math.floor((now-run.phaseStart)/1000);
+    $('tState').textContent='加熱中'; $('tBig').textContent=fmt(el); $('tSub').textContent='已加熱';
+    setRing(0);
+    $('tPhase').textContent=p.title; $('tNote').textContent=p.note;
+    const nx=run.phases[run.idx+1];
+    $('tNext').hidden=false; $('tNext').innerHTML='水滾後：<b>'+nx.title+'</b>，倒數 '+fmt(nx.dur)+'（全程 '+fmt(futureSeconds())+'）';
+    $('tCtl').innerHTML='<button type="button" class="btn primary big" id="btnBoiled">水滾了，下一步</button><button type="button" class="btn quiet" id="btnReset">取消</button>';
+    return;
+  }
+  const rem=Math.max(0,run.endAt-now);
+  $('tState').textContent=run.paused?'已暫停':(run.idx<run.phases.length-1?'第 '+(run.idx+1)+' 段':'最後一段');
+  $('tBig').textContent=fmt(Math.ceil(rem/1000));
+  const fut=futureSeconds();
+  $('tSub').textContent=fut?'全程還剩 '+fmt(Math.ceil(rem/1000)+fut):'這段結束就完成';
+  setRing(1-rem/(p.dur*1000));
+  $('tPhase').textContent=p.title; $('tNote').textContent=p.note;
+  const nx=run.phases[run.idx+1];
+  $('tNext').hidden=false;
+  $('tNext').innerHTML = nx ? fmt(Math.ceil(rem/1000))+' 後：<b>'+nx.title+'</b>' : '時間到：<b>'+run.finish.title+'</b>';
+  $('tCtl').innerHTML='<button type="button" class="btn" id="btnPause">'+(run.paused?'繼續':'暫停')+'</button><button type="button" class="btn quiet" id="btnReset">重設</button>';
+}
+function finish(){
+  run.done=true; run.endAt=Date.now();
+  const t=$('timer'); t.classList.add('done');
+  $('tState').textContent='完成'; $('tBig').textContent='時間到'; $('tSub').textContent='';
+  setRing(1);
+  $('tPhase').textContent=run.finish.title; $('tNote').textContent=run.finish.note;
+  $('tNext').hidden=true;
+  let html='<button type="button" class="btn primary big" id="btnAck">知道了，停止提示音</button>';
+  if(!run.simple&&run.item.ice) html+='<button type="button" class="btn" id="btnIce">泡冰水倒數 '+fmt(run.item.ice)+'</button>';
+  html+='<button type="button" class="btn quiet" id="btnReset">回到選單</button>';
+  $('tCtl').innerHTML=html;
+  toast(run.finish.title+'：'+run.finish.note);
+  speak(run.finish.say); vib([500,200,500,200,900]);
+  alarmBurst(); if(alarmId) clearInterval(alarmId); alarmId=setInterval(()=>{ alarmBurst(); vib([300,150,300]); },2200);
+  releaseAwake();
+}
+function stopAlarm(){ if(alarmId){ clearInterval(alarmId); alarmId=null; } }
+function reset(){
+  stopAlarm(); if(tickId){ clearInterval(tickId); tickId=null; } run=null; releaseAwake();
+  try{ speechSynthesis.cancel(); }catch(e){}
+  renderIdle();
+}
+function pauseToggle(){
+  if(!run||run.done) return;
+  if(run.paused){ const d=Date.now()-run.pausedAt; run.endAt+=d; run.phaseStart+=d; run.paused=false; keepAwake(); }
+  else { run.paused=true; run.pausedAt=Date.now(); }
+  renderRun();
+}
+function startIce(){
+  const it=run.item; stopAlarm();
+  start({phases:[{dur:it.ice,title:'泡冰水降溫',note:'整顆泡在冰塊水裡，時間到就可以剝殼',say:'開始泡冰水，'+zhMin(it.ice)}],
+         finish:{title:'可以剝殼了',note:'從鈍端（有氣室那頭）開始剝，在水裡剝更乾淨',say:'冰水泡好了，可以剝殼了'}});
+  run.item=it;
+}
+
+/* ---------- 提示：聲音、語音、震動、螢幕常亮 ---------- */
+let ac=null, voiceList=[];
+function unlockAudio(){
+  try{ const AC=window.AudioContext||window.webkitAudioContext; if(AC){ ac=ac||new AC(); if(ac.state==='suspended') ac.resume(); } }catch(e){}
+  try{ if('speechSynthesis' in window){ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); voiceList=speechSynthesis.getVoices()||[]; } }catch(e){}
+}
+function beep(freq,dur,when,vol){
+  if(!S.sound||!ac) return;
+  try{ const o=ac.createOscillator(), g=ac.createGain(); const t0=ac.currentTime+(when||0);
+    o.type='sine'; o.frequency.value=freq||880;
+    g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(vol||0.3,t0+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t0+(dur||0.15));
+    o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0+(dur||0.15)+0.05); }catch(e){}
+}
+function chime(){ beep(880,.12,0,.25); beep(1175,.12,.16,.25); beep(1568,.22,.32,.25); }
+function alarmBurst(){ for(let i=0;i<4;i++) beep(1047,.13,i*.22,.35); }
+function pickVoice(){
+  try{ voiceList=speechSynthesis.getVoices()||voiceList; }catch(e){}
+  const pref=['zh-TW','zh_TW','zh-HK','zh_HK','zh-CN','zh_CN','zh'];
+  for(const l of pref){ const v=voiceList.find(v=>v.lang&&v.lang.toLowerCase().replace('_','-').startsWith(l.toLowerCase().replace('_','-'))); if(v) return v; }
+  return null;
+}
+function speak(text){
+  if(!S.voice||!text||!('speechSynthesis' in window)) return;
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang='zh-TW'; const v=pickVoice(); if(v) u.voice=v; u.rate=1; u.pitch=1; speechSynthesis.speak(u); }catch(e){}
+}
+function vib(p){ try{ if(navigator.vibrate) navigator.vibrate(p); }catch(e){} }
+let lock=null;
+async function keepAwake(){ try{ if('wakeLock' in navigator && !lock){ lock=await navigator.wakeLock.request('screen'); lock.addEventListener('release',()=>{ lock=null; }); } }catch(e){ lock=null; } }
+function releaseAwake(){ try{ if(lock) lock.release(); }catch(e){} lock=null; }
+let toastId=null;
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.hidden=false; if(toastId) clearTimeout(toastId); toastId=setTimeout(()=>{ el.hidden=true; },9000); }
+try{ if('speechSynthesis' in window){ speechSynthesis.onvoiceschanged=()=>{ voiceList=speechSynthesis.getVoices()||[]; }; } }catch(e){}
+
+/* ---------- 事件 ---------- */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.tab){ S.tab=b.dataset.tab; const g=GROUPS[S.tab]; if(!g.items.find(i=>i.id===S.sel)) S.sel=g.items[0]?g.items[0].id:null; $('form').hidden=true; save(); renderPicker(); if(!run) renderIdle(); return; }
+  if(b.dataset.id){ S.sel=b.dataset.id; save(); renderCards(); renderDetail(); renderAdjust(); if(!run) renderIdle(); return; }
+  if(b.dataset.temp){ S.temp=b.dataset.temp; save(); renderCards(); renderDetail(); renderAdjust(); if(!run) renderIdle(); return; }
+  if(b.dataset.size){ S.size=b.dataset.size; save(); renderCards(); renderDetail(); renderAdjust(); if(!run) renderIdle(); return; }
+  if(b.dataset.del){ S.custom=(S.custom||[]).filter(c=>c.id!==b.dataset.del); GROUPS.mine.items=S.custom.map(customToItem); S.sel=GROUPS.mine.items[0]?GROUPS.mine.items[0].id:null; save(); renderPicker(); if(!run) renderIdle(); return; }
+  switch(b.id){
+    case 'tuneDown': S.tune=Math.max(-120,(S.tune||0)-15); save(); renderCards(); renderDetail(); renderAdjust(); if(!run) renderIdle(); break;
+    case 'tuneUp': S.tune=Math.min(180,(S.tune||0)+15); save(); renderCards(); renderDetail(); renderAdjust(); if(!run) renderIdle(); break;
+    case 'swSound': S.sound=!S.sound; b.setAttribute('aria-pressed',String(S.sound)); save(); if(S.sound) unlockAudio(); break;
+    case 'swVoice': S.voice=!S.voice; b.setAttribute('aria-pressed',String(S.voice)); save(); if(S.voice){ unlockAudio(); speak('語音提醒已開啟'); } break;
+    case 'btnStart': start(); break;
+    case 'btnBoiled': if(run&&run.phases[run.idx].wait){ unlockAudio(); beginPhase(run.idx+1); } break;
+    case 'btnPause': pauseToggle(); break;
+    case 'btnReset': reset(); break;
+    case 'btnAck': stopAlarm(); try{ speechSynthesis.cancel(); }catch(e){} b.disabled=true; b.textContent='已停止提示音'; break;
+    case 'btnIce': startIce(); break;
+    case 'addCustom': $('form').hidden=false; $('fName').focus(); break;
+    case 'fCancel': $('form').hidden=true; break;
+    case 'fSave': saveCustom(); break;
+  }
+});
+$('chkStir').addEventListener('change',e=>{ S.stir=e.target.checked; save(); renderCards(); renderDetail(); if(!run) renderIdle(); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(run&&!run.done&&!run.paused) keepAwake(); tick(); } });
+function saveCustom(){
+  const name=($('fName').value||'').trim()||'自訂倒數';
+  const total=(parseInt($('fMin').value,10)||0)*60+(parseInt($('fSec').value,10)||0);
+  if(total<15){ $('fSec').focus(); toast('時間至少 15 秒'); return; }
+  const midMin=parseInt($('fMidAt').value,10); const midText=($('fMidText').value||'').trim();
+  const c={id:'c'+Date.now(),name,total,midAt:(midMin>0&&midMin*60<total)?midMin*60:0,midText:midText||'中途提醒',endText:($('fEnd').value||'').trim()};
+  S.custom=(S.custom||[]); S.custom.push(c); GROUPS.mine.items=S.custom.map(customToItem);
+  S.tab='mine'; S.sel=c.id; $('form').hidden=true; save(); renderPicker(); if(!run) renderIdle();
+}
+
+/* ---------- 啟動 ---------- */
+$('swSound').setAttribute('aria-pressed',String(!!S.sound)); $('swVoice').setAttribute('aria-pressed',String(!!S.voice));
+if(!GROUPS[S.tab]) S.tab='boil';
+if(!currentItem()){ S.tab='boil'; S.sel='b630'; }
+renderPicker(); renderIdle();
+})();
+</script>
+<footer class="site">
+  <h2>安裝到手機</h2>
+  <p>iPhone：用 Safari 開這個網址，分享 → 「加入主畫面」。先加到主畫面再開始用，主畫面版本和 Safari 的資料分開存。</p>
+  <p>Android：用 Chrome 開，按下面的「安裝到這台裝置」，或 Chrome 選單的「加到主畫面」。</p>
+  <div class="link"><button type="button" id="btnInstall" hidden>安裝到這台裝置</button></div>
+  <h2>分享連結</h2>
+  <div class="link"><code id="shareUrl"></code><button type="button" id="btnCopy">複製</button></div>
+  <p>傳給 LINE 上的人用這個網址，會直接用手機瀏覽器開。設定與自訂倒數只存在這台裝置的瀏覽器裡，不上傳。</p>
+  <p id="ver"></p>
+</footer>
+<script>
+(function(){
+  var VERSION='1.0.0 (2026-10-28)';
+  var base=location.origin+location.pathname.replace(/[^\/]*$/,'');
+  var shareUrl=base+'?openExternalBrowser=1';
+  var code=document.getElementById('shareUrl'); if(code) code.textContent=shareUrl;
+  var ver=document.getElementById('ver'); if(ver) ver.textContent='版本 '+VERSION+'　時間依據：各來源常見建議，依自家爐火試過一次再定；半熟蛋請用新鮮冷藏蛋。';
+  var copy=document.getElementById('btnCopy');
+  if(copy) copy.addEventListener('click',function(){
+    var done=function(){ copy.textContent='已複製'; setTimeout(function(){ copy.textContent='複製'; },1500); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(shareUrl).then(done,function(){ selectCode(); }); } else selectCode();
+    function selectCode(){ try{ var r=document.createRange(); r.selectNodeContents(code); var s=getSelection(); s.removeAllRanges(); s.addRange(r); }catch(e){} }
+  });
+  var deferred=null; var btn=document.getElementById('btnInstall');
+  window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); deferred=e; if(btn) btn.hidden=false; });
+  if(btn) btn.addEventListener('click',function(){ if(!deferred) return; deferred.prompt(); deferred.userChoice.then(function(){ deferred=null; btn.hidden=true; }); });
+  window.addEventListener('appinstalled',function(){ if(btn) btn.hidden=true; });
+  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); }); }
+})();
+</script>
+</body>
+</html>
