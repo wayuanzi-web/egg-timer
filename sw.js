@@ -1,7 +1,7 @@
 /* 煮蛋計時器 service worker
    只快取、只清理自己（eggtimer- 前綴）的東西。wayuanzi-web.github.io 底下的網站共用同一個網域的儲存空間，
    所以絕對不碰別的網站的快取。換版時改 VERSION，舊快取會在下次啟用時刪掉。 */
-const VERSION = '1.1.0';
+const VERSION = '1.1.1';
 const CACHE = 'eggtimer-' + VERSION;
 const SCOPE = new URL(self.registration.scope).pathname;
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
