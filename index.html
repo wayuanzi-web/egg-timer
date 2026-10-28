@@ -277,6 +277,34 @@ const GROUPS = {
         phases:[{dur:900,title:'保溫模式',note:'內鍋放蛋，倒入 70°C 熱水蓋過蛋，蓋上鍋蓋按「保溫」（不是煮飯）',say:'保溫模式，十五分鐘'}],
         finish:{title:'撈起沖冷水 3 分鐘',note:'沖冷水或泡冷水 3 分鐘，停止餘溫加熱',say:'時間到，溫泉蛋好了，撈起來沖冷水三分鐘'}}
     ]},
+  fry:{label:'煎蛋（電煮鍋）',
+    prep:['這組是給旋鈕式小電煮鍋（關／保溫／最大）用的。旋鈕沒有中火，控溫靠「轉到關、用餘溫燜」，每一步都會提醒你轉哪裡。','鏟子用矽膠或木頭，不鏽鋼鏟會刮鍋底。油用廚房紙巾抹一層就夠，不用倒。','空鍋開「最大」不要超過 5 分鐘，有些機型會乾燒跳掉，要冷卻才能再開。','煎完趁溫熱加水泡 5 分鐘再洗，黏底的蛋會自己掉。','第一次做完，用下面的 ±15 秒微調（會加在最後一段燜的時間）把時間調成自己這顆鍋的。'],
+    items:[
+      {id:'f1',name:'少油煎蛋',total:360,yolk:2,desc:'紙巾抹油、蓋蓋子燜煎，不用翻面。蛋黃流不流看最後燜多久',use:'配吐司、蓋飯、拌麵',adjustable:true,stirrable:false,ice:0,
+        phases:[{dur:150,title:'空鍋預熱：轉到「最大」',note:'鍋子擦乾，什麼都不放，旋鈕轉到「最大」。蓋子先不要蓋。2 分半後手放鍋口上方會感覺到熱氣',say:'鍋子擦乾，不要放東西，旋鈕轉到最大，預熱兩分半'},
+                {dur:30,title:'抹油、下蛋、蓋蓋子',note:'廚房紙巾沾一點油，整個鍋底抹一圈（約半茶匙）。打一顆蛋進去，撒一點鹽，馬上蓋上蓋子。旋鈕留在「最大」',say:'時間到。紙巾沾油抹鍋底，打一顆蛋進去，撒鹽，馬上蓋上蓋子，旋鈕留在最大'},
+                {dur:120,title:'蓋著煎：「最大」2 分鐘',note:'不要開蓋、不要動它。蓋子裡的蒸氣會把蛋黃表面燜到定型，所以不用翻面',say:'蓋著煎兩分鐘，不要開蓋'},
+                {dur:60,title:'轉到「關」，蓋著燜 1 分鐘',note:'旋鈕轉到「關」，蓋子不要開，用餘溫燜。想吃流黃，這段按暫停改燜 30 秒就好；想吃全熟，多燜 1 分鐘再撈',say:'旋鈕轉到關，蓋子不要開，燜一分鐘。想吃流黃就燜三十秒'}],
+        finish:{title:'起鍋',note:'用矽膠鏟從蛋白邊緣貼著鍋底撬起來。鍋還熱，先加半碗水泡著，等一下好洗',say:'時間到，煎蛋好了。用矽膠鏟從邊緣撬起來，鍋子先加水泡著'}},
+      {id:'f2',name:'水煎蛋',total:330,yolk:1,desc:'只抹油、加一大匙水蓋著蒸煎。底不會焦，表面像荷包蛋一樣嫩，最不會失敗',use:'怕油、怕焦的人',adjustable:true,stirrable:false,ice:0,
+        phases:[{dur:150,title:'空鍋預熱：轉到「最大」',note:'鍋子擦乾，什麼都不放，旋鈕轉到「最大」。先準備好 1 大匙水放旁邊',say:'鍋子擦乾，旋鈕轉到最大，預熱兩分半。先準備一大匙水放旁邊'},
+                {dur:60,title:'抹油、下蛋，等蛋白邊緣變白',note:'紙巾沾油抹鍋底，打一顆蛋進去。先不要蓋，看著蛋白邊緣，大約 1 分鐘內會開始變白',say:'時間到。紙巾抹油，打蛋進去，先不要蓋，看蛋白邊緣變白'},
+                {dur:60,title:'淋水、蓋蓋子：「最大」1 分鐘',note:'沿著鍋邊（不是淋在蛋上）倒 1 大匙水，馬上蓋蓋子。會滋滋作響，正常',say:'沿鍋邊倒一大匙水，馬上蓋上蓋子，旋鈕留在最大，一分鐘'},
+                {dur:60,title:'轉到「關」，蓋著燜 1 分鐘',note:'旋鈕轉到「關」，蓋子不要開。蒸氣會把蛋黃表面燜成白膜，裡面還是流的',say:'旋鈕轉到關，蓋子不要開，燜一分鐘'}],
+        finish:{title:'起鍋',note:'開蓋，鍋裡剩的水倒掉，矽膠鏟從邊緣撬起。蛋黃表面有層白膜、裡面流的就是成功',say:'時間到，水煎蛋好了。把水倒掉，用矽膠鏟撬起來'}},
+      {id:'f3',name:'厚蛋燒・蛋餅',total:480,yolk:4,desc:'兩顆蛋打散倒進去蓋著燜，口徑小剛好做出厚厚一片，倒扣出來切塊',use:'便當、配飯、一次吃兩顆',adjustable:true,stirrable:false,ice:0,
+        phases:[{dur:150,title:'空鍋預熱：轉到「最大」',note:'鍋子擦乾，旋鈕轉到「最大」。這段時間把 2 顆蛋打散，加一小撮鹽和 1 大匙水，想加蔥花、起司現在加',say:'旋鈕轉到最大，預熱兩分半。這段時間把兩顆蛋打散，加一小撮鹽和一大匙水'},
+                {dur:30,title:'抹油、倒蛋液、蓋蓋子',note:'紙巾沾油抹鍋底和內壁下緣，蛋液一口氣倒進去，馬上蓋蓋子。旋鈕留在「最大」',say:'時間到。紙巾抹油，蛋液倒進去，馬上蓋上蓋子，旋鈕留在最大'},
+                {dur:180,title:'蓋著煎：「最大」3 分鐘',note:'不要開蓋。表面會慢慢從液態變成凝固，邊緣脫離鍋壁',say:'蓋著煎三分鐘，不要開蓋'},
+                {dur:120,title:'轉到「關」，蓋著燜 2 分鐘',note:'旋鈕轉到「關」，蓋子不要開，讓中心靠餘溫熟透。開蓋後中心還會晃就再燜 1 分鐘',say:'旋鈕轉到關，蓋子不要開，燜兩分鐘'}],
+        finish:{title:'倒扣出來',note:'矽膠鏟沿鍋邊劃一圈，拿盤子蓋在鍋口上整個倒扣，切塊。中心還軟就蓋回去再燜 1 分鐘',say:'時間到，厚蛋燒好了。鏟子沿鍋邊劃一圈，拿盤子蓋上去倒扣出來'}},
+      {id:'f4',name:'酥邊煎蛋',total:390,yolk:1,desc:'預熱久一點、油 1 茶匙、不蓋蓋子，蛋白邊緣會起泡變酥。最接近「炸」但油只有一茶匙',use:'想吃酥邊、蛋黃流的',adjustable:true,stirrable:false,ice:0,
+        phases:[{dur:240,title:'空鍋預熱：轉到「最大」4 分鐘',note:'鍋子擦乾，旋鈕轉到「最大」，預熱要久一點，鍋才夠燙。不要超過 5 分鐘',say:'旋鈕轉到最大，預熱四分鐘，鍋要夠燙'},
+                {dur:30,title:'倒 1 茶匙油、下蛋，不蓋',note:'倒 1 茶匙油，晃一下讓油鋪滿鍋底。油面出現紋路就打蛋進去。這次不蓋蓋子',say:'時間到。倒一茶匙油，晃一下鋪滿，打蛋進去，不要蓋蓋子'},
+                {dur:90,title:'「最大」煎 1 分半：邊緣起泡',note:'不蓋蓋子，看蛋白邊緣冒泡、變成金黃色。想要蛋黃表面也熟，可以用湯匙把鍋邊的熱油淋在蛋黃上',say:'不蓋蓋子煎一分半，看邊緣起泡變金黃。可以用湯匙把熱油淋在蛋黃上'},
+                {dur:30,title:'轉到「關」，再等 30 秒',note:'旋鈕轉到「關」。邊緣酥了就可以起鍋，蛋黃還是流的',say:'旋鈕轉到關，再等三十秒就起鍋'}],
+        finish:{title:'起鍋瀝油',note:'矽膠鏟撬起，放在廚房紙巾上吸一下油。鍋還熱，先加水泡著',say:'時間到，酥邊煎蛋好了。撬起來放紙巾上吸油'}}
+    ]},
   mine:{label:'我的',prep:[],items:[]}
 };
 const YOLK = {0:{fill:'#f4a21a',r:12,gloss:1,whiteOp:.55},1:{fill:'#ef9318',r:12,gloss:1,whiteOp:1},2:{fill:'#f0a21e',r:12,gloss:.7,whiteOp:1},3:{fill:'#f2b63a',r:12,gloss:.4,whiteOp:1},4:{fill:'#f1c85e',r:11,gloss:0,whiteOp:1},5:{fill:'#efd47a',r:11,gloss:0,whiteOp:1}};
@@ -306,7 +334,7 @@ const $=id=>document.getElementById(id);
 function fmt(sec){ sec=Math.max(0,Math.round(sec)); const m=Math.floor(sec/60), s=sec%60; return m+':'+String(s).padStart(2,'0'); }
 function findItem(id){ for(const g of Object.values(GROUPS)){ const it=g.items.find(i=>i.id===id); if(it) return it; } return null; }
 function currentItem(){ return findItem(S.sel) || GROUPS[S.tab].items[0] || null; }
-function adjustSeconds(it){ if(!it||!it.adjustable) return 0; return TEMP_ADJ[S.temp]+SIZE_ADJ[S.size]+(S.tune||0); }
+function adjustSeconds(it){ if(!it||!it.adjustable) return 0; if(it.ice===0) return (S.tune||0); return TEMP_ADJ[S.temp]+SIZE_ADJ[S.size]+(S.tune||0); }
 /* 把預設做法展開成實際要跑的階段（含攪動、調整） */
 function buildPhases(it){
   let ph=it.phases.map(p=>Object.assign({},p));
@@ -349,8 +377,9 @@ function renderDetail(){
 }
 function renderAdjust(){
   const it=currentItem();
-  const show=!!(it&&it.adjustable);
-  $('rowTemp').hidden=!show; $('rowSize').hidden=!show; $('adjHint').hidden=!show;
+  const show=!!(it&&it.adjustable&&it.ice!==0);
+  $('rowTemp').hidden=!show; $('rowSize').hidden=!show; $('adjHint').hidden=!(it&&it.adjustable);
+  $('adjHint').textContent = (it&&it.ice===0) ? '微調會加在最後一段燜的時間上。每顆鍋功率不同，第一次做完照結果調整，會記住。' : '調整會加在最後一段煮的時間上。上面的秒數是常見建議，依自家爐火和鍋子試過一次再定。';
   $('rowStir').hidden=!(it&&it.stirrable);
   $('adjust').hidden=!it||(!it.adjustable&&!it.stirrable);
   document.querySelectorAll('[data-temp]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.temp===S.temp)));
@@ -372,7 +401,7 @@ function renderIdle(){
   $('tName').textContent=it.name; $('tState').textContent='準備';
   $('tBig').textContent=fmt(total); $('tSub').textContent=ph[0].wait?'水滾後開始計時':'全程';
   setRing(0);
-  $('tPhase').textContent=ph[0].title; $('tNote').textContent=ph[0].wait?ph[0].note:'按開始的同時把蛋放進鍋裡';
+  $('tPhase').textContent=ph[0].title; $('tNote').textContent=ph[0].wait?ph[0].note:(it.ice===0?ph[0].note:'按開始的同時把蛋放進鍋裡');
   $('tNext').hidden=true;
   $('tCtl').innerHTML='<button type="button" class="btn primary big" id="btnStart">開始煮　'+fmt(total)+'</button>';
   $('tFoot').hidden=false;
@@ -399,7 +428,7 @@ function tick(){
   if(p.wait){ renderRun(); return; }
   const rem=run.endAt-now;
   if(rem<=0){ if(run.idx<run.phases.length-1) beginPhase(run.idx+1); else finish(); return; }
-  if(!run.pre && run.idx===run.phases.length-1 && p.dur>=90 && rem<=30000){ run.pre=true; beep(660,.18,0,.2); speak('還有三十秒，準備好'+(run.simple?'':'冰水')); }
+  if(!run.pre && run.idx===run.phases.length-1 && p.dur>=90 && rem<=30000){ run.pre=true; beep(660,.18,0,.2); speak('還有三十秒'+((run.simple||run.item.ice===0)?'':'，準備好冰水')); }
   renderRun();
 }
 function futureSeconds(){ let s=0; for(let i=run.idx+1;i<run.phases.length;i++){ if(!run.phases[i].wait) s+=run.phases[i].dur; } return s; }
@@ -551,7 +580,7 @@ renderPicker(); renderIdle();
 </footer>
 <script>
 (function(){
-  var VERSION='1.0.0 (2026-10-28)';
+  var VERSION='1.1.0 (2026-10-28)';
   var base=location.origin+location.pathname.replace(/[^\/]*$/,'');
   var shareUrl=base+'?openExternalBrowser=1';
   var code=document.getElementById('shareUrl'); if(code) code.textContent=shareUrl;
